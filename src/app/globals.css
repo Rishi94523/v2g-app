@@ -1,26 +1,181 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* HSL Base: 220deg Saturation 20% Lightness 88% (roughly #e0e5ec) */
+  --hue: 220;
+  --sat: 20%;
+  --lig: 88%;
+
+  --background: hsl(var(--hue), var(--sat), var(--lig));
+  --foreground: hsl(var(--hue), 20%, 30%);
+  /* Darker text for contrast */
+
+  /* Neumorphic Shadows (Light Theme) */
+  --neu-shadow-light: hsl(var(--hue), var(--sat), 100%);
+  --neu-shadow-dark: hsl(var(--hue), var(--sat), 75%);
+
+  --primary: #22c55e;
+  /* Keep Green for V2G */
+  --primary-dark: #16a34a;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--hue), var(--sat), 75%);
+  border-radius: 10px;
+  border: 3px solid var(--background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--hue), var(--sat), 65%);
+}
+
+/* Neumorphic Utilities */
+.neu-flat {
+  background: var(--background);
+  box-shadow:
+    12px 12px 24px var(--neu-shadow-dark),
+    -12px -12px 24px var(--neu-shadow-light);
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.neu-inset {
+  background: var(--background);
+  box-shadow:
+    inset 6px 6px 12px var(--neu-shadow-dark),
+    inset -6px -6px 12px var(--neu-shadow-light);
+  border-radius: 20px;
+}
+
+/* Typography Enhancements */
+h1,
+h2,
+h3 {
+  color: hsl(var(--hue), 20%, 25%);
+  letter-spacing: -0.05em;
+}
+
+.title-emboss {
+  color: var(--background);
+  text-shadow:
+    2px 2px 4px var(--neu-shadow-dark),
+    -2px -2px 4px var(--neu-shadow-light);
+}
+
+/* Card styles */
+.card {
+  background: var(--background);
+  box-shadow:
+    12px 12px 24px var(--neu-shadow-dark),
+    -12px -12px 24px var(--neu-shadow-light);
+  border-radius: 30px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow:
+    16px 16px 32px var(--neu-shadow-dark),
+    -16px -16px 32px var(--neu-shadow-light);
+}
+
+/* Buttons */
+.neu-btn {
+  background: var(--background);
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  box-shadow:
+    8px 8px 16px var(--neu-shadow-dark),
+    -8px -8px 16px var(--neu-shadow-light);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.neu-btn:hover {
+  transform: translateY(-2px);
+  color: var(--primary-dark);
+  box-shadow:
+    10px 10px 20px var(--neu-shadow-dark),
+    -10px -10px 20px var(--neu-shadow-light);
+}
+
+.neu-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    inset 4px 4px 8px var(--neu-shadow-dark),
+    inset -4px -4px 8px var(--neu-shadow-light);
+}
+
+.neu-icon-btn {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+  box-shadow:
+    5px 5px 10px var(--neu-shadow-dark),
+    -5px -5px 10px var(--neu-shadow-light);
+  color: hsl(var(--hue), 20%, 50%);
+  transition: all 0.2s ease;
+}
+
+.neu-icon-btn:hover {
+  color: var(--primary);
+  transform: scale(1.05);
+}
+
+.container-width {
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, hsl(var(--hue), 60%, 40%) 0%, hsl(var(--hue), 80%, 30%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Hide scrollbar for horizontal scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
