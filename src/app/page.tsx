@@ -198,7 +198,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-8 justify-center items-center">
             <Link href="/dashboard" className="neu-btn group">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Start Trading
+              Join Network
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
 
