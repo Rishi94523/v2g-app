@@ -6,6 +6,14 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { Zap, Battery, Settings as SettingsIcon, LogOut, Check, Wallet, Loader2 } from 'lucide-react'
+import {
+    connectMetaMask,
+    getConnectedAccount,
+    getCurrentChainId,
+    isMetaMaskAvailable,
+    isSepolia,
+    shortAddress
+} from '@/lib/metamask'
 
 export default function Settings() {
     const { user, loading, signOut } = useAuth()
@@ -23,6 +31,17 @@ export default function Settings() {
     const [saved, setSaved] = useState(false)
     const [saving, setSaving] = useState(false)
     const [loadingPrefs, setLoadingPrefs] = useState(true)
+    const [walletConnecting, setWalletConnecting] = useState(false)
+    const [walletError, setWalletError] = useState<string | null>(null)
+    const [walletInfo, setWalletInfo] = useState<{
+        available: boolean
+        address: string | null
+        chainId: string | null
+    }>({
+        available: false,
+        address: null,
+        chainId: null
+    })
 
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
@@ -66,6 +85,29 @@ export default function Settings() {
         }
     }, [user, loading, router])
 
+    useEffect(() => {
+        async function syncWalletState() {
+            const available = isMetaMaskAvailable()
+            if (!available) {
+                setWalletInfo({ available: false, address: null, chainId: null })
+                return
+            }
+
+            try {
+                const [address, chainId] = await Promise.all([
+                    getConnectedAccount(),
+                    getCurrentChainId()
+                ])
+                setWalletInfo({ available: true, address, chainId })
+            } catch (error) {
+                console.error('Failed to read MetaMask state:', error)
+                setWalletInfo({ available: true, address: null, chainId: null })
+            }
+        }
+
+        syncWalletState()
+    }, [])
+
     const toggleDay = (day: string) => {
         setPreferences(prev => ({
             ...prev,
@@ -78,6 +120,12 @@ export default function Settings() {
     const handleSave = async () => {
         if (!user) return
 
+        if (preferences.wallet_address && !isWalletAddress(preferences.wallet_address)) {
+            setWalletError('Wallet address must be a valid EVM address')
+            return
+        }
+
+        setWalletError(null)
         setSaving(true)
         try {
             const { error } = await supabase
@@ -103,6 +151,28 @@ export default function Settings() {
             console.error('Error saving preferences:', err)
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleConnectWallet = async () => {
+        setWalletError(null)
+        setWalletConnecting(true)
+        try {
+            const connection = await connectMetaMask()
+            setWalletInfo({
+                available: true,
+                address: connection.address,
+                chainId: connection.chainId
+            })
+            setPreferences((prev) => ({
+                ...prev,
+                wallet_address: connection.address
+            }))
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to connect MetaMask'
+            setWalletError(message)
+        } finally {
+            setWalletConnecting(false)
         }
     }
 
@@ -284,7 +354,26 @@ export default function Settings() {
                             <h2 className="text-xl font-bold text-slate-700">Blockchain Wallet</h2>
                         </div>
 
-                        <div>
+                        <div className="space-y-4">
+                            <button
+                                onClick={handleConnectWallet}
+                                disabled={!walletInfo.available || walletConnecting}
+                                className="neu-btn text-sm py-3 px-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {walletConnecting && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {walletConnecting ? 'Connecting...' : 'Connect MetaMask (Sepolia)'}
+                            </button>
+
+                            <div className="text-xs text-slate-500 space-y-1">
+                                <p>MetaMask: {walletInfo.available ? 'Detected' : 'Not detected'}</p>
+                                <p>
+                                    Network: {walletInfo.chainId ? (isSepolia(walletInfo.chainId) ? 'Sepolia' : walletInfo.chainId) : 'Not connected'}
+                                </p>
+                                <p>
+                                    Connected account: {walletInfo.address ? shortAddress(walletInfo.address) : 'Not connected'}
+                                </p>
+                            </div>
+
                             <label className="block text-sm text-slate-500 mb-2 font-medium">
                                 Ethereum Wallet Address (Sepolia)
                             </label>
@@ -298,6 +387,9 @@ export default function Settings() {
                             <p className="text-xs text-slate-400 mt-2">
                                 V2G tokens will be sent to this address
                             </p>
+                            {walletError && (
+                                <p className="text-xs text-red-500 mt-2">{walletError}</p>
+                            )}
                         </div>
                     </div>
 
@@ -322,4 +414,8 @@ export default function Settings() {
             </main>
         </div>
     )
+}
+
+function isWalletAddress(address: string): boolean {
+    return /^0x[a-fA-F0-9]{40}$/.test(address.trim())
 }

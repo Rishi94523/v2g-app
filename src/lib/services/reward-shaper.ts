@@ -33,6 +33,13 @@ interface RewardComponents {
     weights: RewardWeights
 }
 
+const DEFAULT_FIXED_WEIGHTS: RewardWeights = {
+    profit: 0.4,
+    grid_stability: 0.2,
+    battery_health: 0.3,
+    user_preference: 0.1
+}
+
 /**
  * Calculate the multi-objective reward with adaptive weights
  * 
@@ -43,14 +50,17 @@ export function calculateReward(
     state: DecisionState,
     action: DecisionAction,
     duration_hours: number = 0.25, // Default 15 minutes
-    userDisableDischarge: boolean = false
+    userDisableDischarge: boolean = false,
+    weightOverride?: RewardWeights
 ): RewardComponents {
-    // Get adaptive weights based on current context
-    const weights = getAdaptiveRewardWeights(
-        state.grid_stress_index,
-        state.soc_percent,
-        userDisableDischarge
-    )
+    // Use fixed weights when provided; otherwise use adaptive weights.
+    const weights = weightOverride
+        ? normalizeWeights(weightOverride)
+        : getAdaptiveRewardWeights(
+            state.grid_stress_index,
+            state.soc_percent,
+            userDisableDischarge
+        )
 
     // Calculate individual reward components
     const profitReward = calculateProfitReward(state, action, duration_hours)
@@ -243,15 +253,16 @@ function getActualRate(action: DecisionAction): number {
  */
 export function getBestAction(
     state: DecisionState,
-    userDisableDischarge: boolean = false
+    userDisableDischarge: boolean = false,
+    weightOverride?: RewardWeights
 ): { action: DecisionAction; reward: RewardComponents } {
     const actions = generatePossibleActions(userDisableDischarge)
 
     let bestAction = actions[0]
-    let bestReward = calculateReward(state, bestAction, 0.25, userDisableDischarge)
+    let bestReward = calculateReward(state, bestAction, 0.25, userDisableDischarge, weightOverride)
 
     for (const action of actions.slice(1)) {
-        const reward = calculateReward(state, action, 0.25, userDisableDischarge)
+        const reward = calculateReward(state, action, 0.25, userDisableDischarge, weightOverride)
         if (reward.total > bestReward.total) {
             bestAction = action
             bestReward = reward
@@ -290,9 +301,10 @@ function generatePossibleActions(disableDischarge: boolean = false): DecisionAct
 export function getRewardBreakdown(
     state: DecisionState,
     action: DecisionAction,
-    userDisableDischarge: boolean = false
+    userDisableDischarge: boolean = false,
+    weightOverride?: RewardWeights
 ): string {
-    const reward = calculateReward(state, action, 0.25, userDisableDischarge)
+    const reward = calculateReward(state, action, 0.25, userDisableDischarge, weightOverride)
 
     return `
 Reward Breakdown:
@@ -311,4 +323,25 @@ Reward Breakdown:
     SOC: ${state.soc_percent}%
     Price: ₹${state.current_price}/kWh
 `
+}
+
+function normalizeWeights(weights: RewardWeights): RewardWeights {
+    const source = {
+        profit: weights.profit ?? DEFAULT_FIXED_WEIGHTS.profit,
+        grid_stability: weights.grid_stability ?? DEFAULT_FIXED_WEIGHTS.grid_stability,
+        battery_health: weights.battery_health ?? DEFAULT_FIXED_WEIGHTS.battery_health,
+        user_preference: weights.user_preference ?? DEFAULT_FIXED_WEIGHTS.user_preference
+    }
+    const sum = Object.values(source).reduce((a, b) => a + b, 0)
+
+    if (sum <= 0) {
+        return { ...DEFAULT_FIXED_WEIGHTS }
+    }
+
+    return {
+        profit: Number((source.profit / sum).toFixed(3)),
+        grid_stability: Number((source.grid_stability / sum).toFixed(3)),
+        battery_health: Number((source.battery_health / sum).toFixed(3)),
+        user_preference: Number((source.user_preference / sum).toFixed(3))
+    }
 }

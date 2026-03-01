@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import { findOptimalWindows, getPriceTrend, isPeakHour } from '@/lib/services/price-service'
+import { findOptimalWindows, getPriceTrend, isPeakHour, getCurrentPrice } from '@/lib/services/price-service'
 import { getGridStatus } from '@/lib/services/grid-service'
 import {
     getRealTimeGridStatus,
+    getRealTimePriceData,
     isElectricityMapsConfigured,
     getCarbonIntensity,
     getPowerBreakdown
@@ -33,11 +34,27 @@ import {
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
-        const source = searchParams.get('source') || 'auto'
+        const sourceParam = searchParams.get('source')
+        const configuredSource = process.env.PRICE_DATA_SOURCE || 'auto'
+        const source = (sourceParam || configuredSource).toLowerCase()
         const zone = searchParams.get('zone') || process.env.ELECTRICITY_MAPS_ZONE || 'IN-SO'
 
-        // Get price data from IEX dataset (or fallback to synthetic)
-        const priceData = await getIEXPriceData()
+        let priceData
+        switch (source) {
+            case 'mock':
+                priceData = getCurrentPrice()
+                break
+            case 'electricity-maps':
+            case 'emaps':
+                priceData = await getRealTimePriceData(zone)
+                break
+            case 'dataset':
+            case 'iex':
+            case 'auto':
+            default:
+                priceData = await getIEXPriceData()
+                break
+        }
 
         // Get grid status and environmental data from Electricity Maps
         let gridStatus = getGridStatus()
@@ -147,6 +164,7 @@ export async function GET(request: Request) {
                 iex_dataset_loaded: isDatasetLoaded(),
                 iex_dataset_records: datasetInfo.recordCount,
                 iex_date_range: datasetInfo.dateRange,
+                requested_source: source,
                 data_source: priceData.source
             }
         })

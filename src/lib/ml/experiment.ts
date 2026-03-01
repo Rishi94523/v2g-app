@@ -92,7 +92,10 @@ export class ExperimentRunner {
         }
 
         // Initialize environment
-        this.env = new V2GEnvironment(this.prices, this.config.simConfig)
+        this.env = new V2GEnvironment(this.prices, {
+            ...this.config.simConfig,
+            useAdaptiveWeights: this.config.useAdaptiveWeights
+        })
 
         // Create output directory
         if (!fs.existsSync(this.outputDir)) {
@@ -232,7 +235,10 @@ export class ExperimentRunner {
         const startStep = Math.floor(Math.random() * (this.prices.length - 100))
         const episodePrices = this.prices.slice(startStep, startStep + 200)
 
-        const env = new V2GEnvironment(episodePrices, this.config.simConfig)
+        const env = new V2GEnvironment(episodePrices, {
+            ...this.config.simConfig,
+            useAdaptiveWeights: this.config.useAdaptiveWeights
+        })
         let state = env.reset()
 
         while (true) {
@@ -283,7 +289,10 @@ export class ExperimentRunner {
             const startStep = Math.floor(Math.random() * (this.prices.length - 100))
             const episodePrices = this.prices.slice(startStep, startStep + 200)
 
-            const env = new V2GEnvironment(episodePrices, this.config.simConfig)
+            const env = new V2GEnvironment(episodePrices, {
+                ...this.config.simConfig,
+                useAdaptiveWeights: this.config.useAdaptiveWeights
+            })
             let state = env.reset()
 
             while (true) {

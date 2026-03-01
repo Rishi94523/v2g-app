@@ -8,7 +8,6 @@
 import type { DecisionState, DecisionAction, RewardWeights } from '@/types/v2g'
 import { stateToVector, indexToAction, STATE_SIZE, ACTION_SIZE } from './preprocessing'
 import { calculateReward } from '../services/reward-shaper'
-import { getAdaptiveRewardWeights } from '../services/grid-service'
 
 export interface BatteryConfig {
     capacityKwh: number
@@ -24,6 +23,8 @@ export interface SimulationConfig {
     episodeLengthSteps: number  // Episode length in steps
     minSoc: number              // Minimum allowed SOC
     maxSoc: number              // Maximum allowed SOC
+    useAdaptiveWeights: boolean
+    fixedWeights: RewardWeights
 }
 
 const DEFAULT_BATTERY: BatteryConfig = {
@@ -39,7 +40,14 @@ const DEFAULT_SIM_CONFIG: SimulationConfig = {
     stepDurationHours: 0.25,     // 15 minutes
     episodeLengthSteps: 96,      // 24 hours
     minSoc: 10,
-    maxSoc: 95
+    maxSoc: 95,
+    useAdaptiveWeights: true,
+    fixedWeights: {
+        profit: 0.4,
+        grid_stability: 0.2,
+        battery_health: 0.3,
+        user_preference: 0.1
+    }
 }
 
 export interface StepResult {
@@ -121,7 +129,8 @@ export class V2GEnvironment {
             state,
             action as DecisionAction,
             this.config.stepDurationHours,
-            false
+            false,
+            this.config.useAdaptiveWeights ? undefined : this.config.fixedWeights
         )
 
         // Apply action to battery

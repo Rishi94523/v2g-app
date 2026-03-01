@@ -124,8 +124,7 @@ export async function POST(request: Request) {
         await supabase
             .from('devices')
             .update({
-                last_seen_at: new Date().toISOString(),
-                last_telemetry: payload.bms_data
+                last_seen_at: new Date().toISOString()
             })
             .eq('id', device.id)
 
@@ -134,8 +133,12 @@ export async function POST(request: Request) {
             .from('decision_logs')
             .insert({
                 device_id: device.id,
-                state: state,
-                action: command,
+                soc_percent: state.soc_percent,
+                electricity_price: state.current_price,
+                decision: command.action,
+                rate_kw: command.rate_kw,
+                solar_available_kw: null,
+                reason: command.reason,
                 timestamp: new Date().toISOString()
             })
 

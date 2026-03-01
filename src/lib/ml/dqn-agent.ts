@@ -6,6 +6,8 @@
  */
 
 import * as tf from '@tensorflow/tfjs'
+import * as fs from 'fs'
+import * as nodePath from 'path'
 import { STATE_SIZE, ACTION_SIZE, ReplayBuffer, TrainingDataPoint } from './preprocessing'
 
 export interface DQNConfig {
@@ -235,8 +237,70 @@ export class DQNAgent {
      * Save model to file
      */
     async saveModel(path: string): Promise<void> {
-        await this.model.save(`file://${path}`)
-        console.log(`Model saved to ${path}`)
+        try {
+            await this.model.save(`file://${path}`)
+            console.log(`Model saved to ${path}`)
+            return
+        } catch (error) {
+            console.warn(`Standard model save failed, using fallback artifact save: ${String(error)}`)
+        }
+
+        fs.mkdirSync(path, { recursive: true })
+
+        let capturedArtifacts: tf.io.ModelArtifacts | null = null
+        await this.model.save(tf.io.withSaveHandler(async (artifacts) => {
+            capturedArtifacts = artifacts
+            return {
+                modelArtifactsInfo: tf.io.getModelArtifactsInfoForJSON(artifacts)
+            }
+        }))
+
+        if (!capturedArtifacts) {
+            throw new Error('Failed to capture model artifacts for fallback save')
+        }
+
+        const artifacts = capturedArtifacts as tf.io.ModelArtifacts
+        if (!artifacts.modelTopology || !artifacts.weightSpecs || !artifacts.weightData) {
+            throw new Error('Captured artifacts are incomplete for fallback save')
+        }
+
+        const modelJson = {
+            format: 'layers-model',
+            generatedBy: 'v2g-dqn-agent-fallback',
+            convertedBy: null,
+            modelTopology: artifacts.modelTopology,
+            weightsManifest: [
+                {
+                    paths: ['weights.bin'],
+                    weights: artifacts.weightSpecs
+                }
+            ]
+        }
+
+        fs.writeFileSync(
+            nodePath.join(path, 'model.json'),
+            JSON.stringify(modelJson, null, 2),
+            'utf-8'
+        )
+        const rawWeightData = artifacts.weightData as ArrayBuffer | ArrayBuffer[] | ArrayBufferView
+        let weightDataBuffer: Buffer
+
+        if (rawWeightData instanceof ArrayBuffer) {
+            weightDataBuffer = Buffer.from(new Uint8Array(rawWeightData))
+        } else if (Array.isArray(rawWeightData)) {
+            const chunks = rawWeightData.map((chunk) => Buffer.from(new Uint8Array(chunk)))
+            weightDataBuffer = Buffer.concat(chunks)
+        } else {
+            weightDataBuffer = Buffer.from(
+                rawWeightData.buffer,
+                rawWeightData.byteOffset,
+                rawWeightData.byteLength
+            )
+        }
+
+        fs.writeFileSync(nodePath.join(path, 'weights.bin'), weightDataBuffer)
+
+        console.log(`Model artifacts saved via fallback to ${path}`)
     }
 
     /**

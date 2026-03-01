@@ -1,0 +1,66 @@
+{
+  "mode": "adaptive",
+  "episodes": 12,
+  "metrics": [
+    {
+      "episode": 0,
+      "reward": -34.2589,
+      "soc": 80.53
+    },
+    {
+      "episode": 1,
+      "reward": 20.8734,
+      "soc": 63.69
+    },
+    {
+      "episode": 2,
+      "reward": 26.9419,
+      "soc": 49.55
+    },
+    {
+      "episode": 3,
+      "reward": 6.3249,
+      "soc": 50.5
+    },
+    {
+      "episode": 4,
+      "reward": 79.8474,
+      "soc": 35.17
+    },
+    {
+      "episode": 5,
+      "reward": 74.36,
+      "soc": 30.23
+    },
+    {
+      "episode": 6,
+      "reward": 42.7236,
+      "soc": 10
+    },
+    {
+      "episode": 7,
+      "reward": 109.106,
+      "soc": 16.88
+    },
+    {
+      "episode": 8,
+      "reward": 32.5952,
+      "soc": 10.3
+    },
+    {
+      "episode": 9,
+      "reward": 51.7881,
+      "soc": 10
+    },
+    {
+      "episode": 10,
+      "reward": 75.4064,
+      "soc": 10.52
+    },
+    {
+      "episode": 11,
+      "reward": 67.9921,
+      "soc": 12.79
+    }
+  ]
+}
