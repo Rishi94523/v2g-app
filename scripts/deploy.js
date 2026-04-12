@@ -1,10 +1,14 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const hre = require("hardhat");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
     console.log("Deploying V2G contracts...\n");
 
     // Get the deployer account
     const [deployer] = await hre.ethers.getSigners();
+    const network = await hre.ethers.provider.getNetwork();
     console.log("Deploying with account:", deployer.address);
     console.log("Account balance:", (await hre.ethers.provider.getBalance(deployer.address)).toString());
     console.log();
@@ -39,6 +43,29 @@ async function main() {
     console.log(`RewardDistributor: ${distributorAddress}`);
     console.log(`Network:           ${hre.network.name}`);
     console.log("=".repeat(50));
+
+    const deploymentDir = path.join(__dirname, "..", "contracts", "deployments");
+    fs.mkdirSync(deploymentDir, { recursive: true });
+    const deploymentPath = path.join(deploymentDir, `${hre.network.name}.json`);
+    fs.writeFileSync(
+        deploymentPath,
+        JSON.stringify(
+            {
+                network: hre.network.name,
+                chainId: Number(network.chainId),
+                rpcUrl: hre.network.config.url || null,
+                deployedAt: new Date().toISOString(),
+                deployer: deployer.address,
+                contracts: {
+                    V2GToken: v2gTokenAddress,
+                    RewardDistributor: distributorAddress,
+                },
+            },
+            null,
+            2
+        )
+    );
+    console.log(`Deployment record: ${deploymentPath}`);
 
     // Verify instructions for Sepolia
     if (hre.network.name === "sepolia") {

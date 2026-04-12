@@ -1,0 +1,11 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
+  "deployedAt": "2026-04-12T04:36:37.349Z",
+  "deployer": "0x738e4b4093C8306D6ED29AE616022227c4D0F10E",
+  "contracts": {
+    "V2GToken": "0xa0a84C4dD6fBFFb849d319AdA6C776D9852b5B7f",
+    "RewardDistributor": "0x12418233C765A051fB9DB758598C1130dB40Db8C"
+  }
+}

@@ -21,10 +21,17 @@ export default function Settings() {
 
     const [preferences, setPreferences] = useState({
         min_soc_percent: 20,
+        max_soc_percent: 90,
+        target_departure_soc_percent: 80,
         disable_discharge: false,
         no_discharge_days: [] as string[],
         quiet_hours_start: '',
         quiet_hours_end: '',
+        preferred_departure_time: '08:00',
+        max_charge_kw: 7.4,
+        max_discharge_kw: 5.0,
+        control_interval_minutes: 15,
+        timezone_name: 'Asia/Kolkata',
         wallet_address: ''
     })
 
@@ -60,10 +67,17 @@ export default function Settings() {
                 if (data && !error) {
                     setPreferences({
                         min_soc_percent: data.min_soc_percent ?? 20,
+                        max_soc_percent: data.max_soc_percent ?? 90,
+                        target_departure_soc_percent: data.target_departure_soc_percent ?? 80,
                         disable_discharge: data.disable_discharge ?? false,
                         no_discharge_days: data.no_discharge_days ?? [],
                         quiet_hours_start: data.quiet_hours_start ?? '',
                         quiet_hours_end: data.quiet_hours_end ?? '',
+                        preferred_departure_time: data.preferred_departure_time ?? '08:00',
+                        max_charge_kw: data.max_charge_kw ?? 7.4,
+                        max_discharge_kw: data.max_discharge_kw ?? 5.0,
+                        control_interval_minutes: data.control_interval_minutes ?? 15,
+                        timezone_name: data.timezone_name ?? 'Asia/Kolkata',
                         wallet_address: data.wallet_address ?? ''
                     })
                 }
@@ -125,6 +139,17 @@ export default function Settings() {
             return
         }
 
+        if (preferences.max_soc_percent <= preferences.min_soc_percent) {
+            setWalletError('Maximum SOC must be greater than minimum SOC')
+            return
+        }
+
+        if (preferences.target_departure_soc_percent < preferences.min_soc_percent ||
+            preferences.target_departure_soc_percent > preferences.max_soc_percent) {
+            setWalletError('Target departure SOC must stay between minimum and maximum SOC')
+            return
+        }
+
         setWalletError(null)
         setSaving(true)
         try {
@@ -133,10 +158,17 @@ export default function Settings() {
                 .upsert({
                     user_id: user.id,
                     min_soc_percent: preferences.min_soc_percent,
+                    max_soc_percent: preferences.max_soc_percent,
+                    target_departure_soc_percent: preferences.target_departure_soc_percent,
                     disable_discharge: preferences.disable_discharge,
                     no_discharge_days: preferences.no_discharge_days,
                     quiet_hours_start: preferences.quiet_hours_start || null,
                     quiet_hours_end: preferences.quiet_hours_end || null,
+                    preferred_departure_time: preferences.preferred_departure_time || null,
+                    max_charge_kw: preferences.max_charge_kw,
+                    max_discharge_kw: preferences.max_discharge_kw,
+                    control_interval_minutes: preferences.control_interval_minutes,
+                    timezone_name: preferences.timezone_name,
                     wallet_address: preferences.wallet_address || null
                 }, { onConflict: 'user_id' })
 
@@ -271,20 +303,138 @@ export default function Settings() {
                                 </p>
                             </div>
 
+                            {/* Maximum SOC */}
+                            <div>
+                                <label className="block text-sm text-slate-500 mb-3 font-medium">
+                                    Maximum Operating SOC
+                                </label>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex-1 neu-inset rounded-full p-1">
+                                        <input
+                                            type="range"
+                                            min="60"
+                                            max="100"
+                                            value={preferences.max_soc_percent}
+                                            onChange={(e) => setPreferences(prev => ({ ...prev, max_soc_percent: parseInt(e.target.value) }))}
+                                            className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer accent-green-500"
+                                        />
+                                    </div>
+                                    <span className="w-16 text-center font-bold text-slate-700 text-lg">
+                                        {preferences.max_soc_percent}%
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-2">
+                                    The backend will avoid charging above this level
+                                </p>
+                            </div>
+
                             {/* Disable Discharge */}
                             <div className="flex items-center justify-between p-4 neu-inset rounded-2xl">
                                 <div>
-                                    <div className="font-bold text-slate-700">Disable All Discharging</div>
-                                    <p className="text-sm text-slate-500">Stop selling power to grid completely</p>
+                                    <div className="font-bold text-slate-700">Allow V2G Export</div>
+                                    <p className="text-sm text-slate-500">Permit backend decisions to discharge to the grid</p>
                                 </div>
                                 <button
                                     onClick={() => setPreferences(prev => ({ ...prev, disable_discharge: !prev.disable_discharge }))}
-                                    className={`w-14 h-8 rounded-full transition-all relative ${preferences.disable_discharge ? 'bg-red-500' : 'bg-slate-300'
+                                    className={`w-14 h-8 rounded-full transition-all relative ${!preferences.disable_discharge ? 'bg-green-500' : 'bg-slate-300'
                                         }`}
                                 >
-                                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform absolute top-1 ${preferences.disable_discharge ? 'translate-x-7' : 'translate-x-1'
+                                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform absolute top-1 ${!preferences.disable_discharge ? 'translate-x-7' : 'translate-x-1'
                                         }`} />
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Departure & Control Settings */}
+                    <div className="card">
+                        <h2 className="text-xl font-bold text-slate-700 mb-6">Departure & Control</h2>
+
+                        <div className="space-y-8">
+                            <div>
+                                <label className="block text-sm text-slate-500 mb-3 font-medium">
+                                    Target Departure SOC
+                                </label>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex-1 neu-inset rounded-full p-1">
+                                        <input
+                                            type="range"
+                                            min="40"
+                                            max="100"
+                                            value={preferences.target_departure_soc_percent}
+                                            onChange={(e) => setPreferences(prev => ({ ...prev, target_departure_soc_percent: parseInt(e.target.value) }))}
+                                            className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer accent-green-500"
+                                        />
+                                    </div>
+                                    <span className="w-16 text-center font-bold text-slate-700 text-lg">
+                                        {preferences.target_departure_soc_percent}%
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-2">
+                                    The backend will try to hit this SOC by the next preferred departure time
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-500 mb-3 font-medium">
+                                    Preferred Departure Time
+                                </label>
+                                <input
+                                    type="time"
+                                    value={preferences.preferred_departure_time}
+                                    onChange={(e) => setPreferences(prev => ({ ...prev, preferred_departure_time: e.target.value }))}
+                                    className="neu-inset rounded-xl px-4 py-3 text-slate-700 bg-transparent focus:outline-none"
+                                />
+                                <p className="text-xs text-slate-400 mt-2">
+                                    Used by the backend to estimate hours remaining to departure
+                                </p>
+                            </div>
+
+                            <div className="grid md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm text-slate-500 mb-3 font-medium">
+                                        Max Charge kW
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="22"
+                                        step="0.1"
+                                        value={preferences.max_charge_kw}
+                                        onChange={(e) => setPreferences(prev => ({ ...prev, max_charge_kw: Number(e.target.value) }))}
+                                        className="w-full neu-inset rounded-xl px-4 py-3 text-slate-700 bg-transparent focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-slate-500 mb-3 font-medium">
+                                        Max Discharge kW
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="22"
+                                        step="0.1"
+                                        value={preferences.max_discharge_kw}
+                                        onChange={(e) => setPreferences(prev => ({ ...prev, max_discharge_kw: Number(e.target.value) }))}
+                                        className="w-full neu-inset rounded-xl px-4 py-3 text-slate-700 bg-transparent focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-slate-500 mb-3 font-medium">
+                                        Control Interval
+                                    </label>
+                                    <select
+                                        value={preferences.control_interval_minutes}
+                                        onChange={(e) => setPreferences(prev => ({ ...prev, control_interval_minutes: Number(e.target.value) }))}
+                                        className="w-full neu-inset rounded-xl px-4 py-3 text-slate-700 bg-transparent focus:outline-none"
+                                    >
+                                        <option value={5}>5 min</option>
+                                        <option value={10}>10 min</option>
+                                        <option value={15}>15 min</option>
+                                        <option value={30}>30 min</option>
+                                        <option value={60}>60 min</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>

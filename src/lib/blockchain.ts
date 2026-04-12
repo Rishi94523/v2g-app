@@ -1,4 +1,5 @@
 import { ethers } from 'ethers'
+import { getBlockchainDeploymentConfig } from './blockchain-config'
 
 // Contract ABIs (simplified - only functions we need)
 const V2G_TOKEN_ABI = [
@@ -22,7 +23,7 @@ const REWARD_DISTRIBUTOR_ABI = [
  * Get provider based on environment
  */
 export function getProvider(): ethers.JsonRpcProvider {
-    const rpcUrl = process.env.SEPOLIA_RPC_URL || 'https://rpc.sepolia.org'
+    const { rpcUrl } = getBlockchainDeploymentConfig()
     return new ethers.JsonRpcProvider(rpcUrl)
 }
 
@@ -30,7 +31,7 @@ export function getProvider(): ethers.JsonRpcProvider {
  * Get V2G Token contract instance
  */
 export function getV2GTokenContract(signerOrProvider?: ethers.Signer | ethers.Provider) {
-    const address = process.env.NEXT_PUBLIC_V2G_TOKEN_ADDRESS
+    const { v2gTokenAddress: address } = getBlockchainDeploymentConfig()
     if (!address) {
         throw new Error('V2G Token address not configured')
     }
@@ -41,7 +42,7 @@ export function getV2GTokenContract(signerOrProvider?: ethers.Signer | ethers.Pr
  * Get Reward Distributor contract instance
  */
 export function getRewardDistributorContract(signerOrProvider?: ethers.Signer | ethers.Provider) {
-    const address = process.env.NEXT_PUBLIC_REWARD_DISTRIBUTOR_ADDRESS
+    const { rewardDistributorAddress: address } = getBlockchainDeploymentConfig()
     if (!address) {
         throw new Error('Reward Distributor address not configured')
     }

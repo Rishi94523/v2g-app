@@ -22,6 +22,7 @@ export interface ChargerStatus {
 export interface TelemetryPayload {
     device_token: string
     timestamp: string             // ISO 8601 format
+    battery_capacity_kwh?: number // Optional explicit battery capacity
     bms_data: BMSData
     charger_status: ChargerStatus
 }
@@ -115,10 +116,17 @@ export interface Experience {
 
 export interface UserPreferences {
     min_soc_percent: number       // Never discharge below this
+    max_soc_percent: number       // Upper SOC ceiling for scheduling
+    target_departure_soc_percent: number // Desired SOC by the next departure window
     disable_discharge: boolean    // User can disable all discharging
     no_discharge_days: string[]   // Days when discharge is disabled
     quiet_hours_start: string | null  // HH:MM format
     quiet_hours_end: string | null
+    preferred_departure_time: string | null // HH:MM local time
+    max_charge_kw: number
+    max_discharge_kw: number
+    control_interval_minutes: number
+    timezone_name: string
     wallet_address: string | null // For token rewards
 }
 

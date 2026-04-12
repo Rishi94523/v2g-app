@@ -49,6 +49,7 @@ typechain-types/
 
 # data files (large)
 data/
+experiments/
 
 # temp files
 nul

@@ -31,10 +31,18 @@ export interface Device {
 export interface UserPreferences {
     user_id: string
     min_soc_percent: number
+    max_soc_percent: number
+    target_departure_soc_percent: number
     disable_discharge: boolean
     no_discharge_days: string[]
     quiet_hours_start: string | null
     quiet_hours_end: string | null
+    preferred_departure_time: string | null
+    max_charge_kw: number
+    max_discharge_kw: number
+    control_interval_minutes: number
+    timezone_name: string
+    wallet_address: string | null
 }
 
 export interface DecisionLog {
@@ -94,6 +102,23 @@ export async function getDeviceByToken(token: string): Promise<Device | null> {
  * Get user preferences
  */
 export async function getUserPreferences(userId: string): Promise<UserPreferences | null> {
+    const defaults: UserPreferences = {
+        user_id: userId,
+        min_soc_percent: 20,
+        max_soc_percent: 90,
+        target_departure_soc_percent: 80,
+        disable_discharge: false,
+        no_discharge_days: [],
+        quiet_hours_start: null,
+        quiet_hours_end: null,
+        preferred_departure_time: '08:00',
+        max_charge_kw: 7.4,
+        max_discharge_kw: 5.0,
+        control_interval_minutes: 15,
+        timezone_name: 'Asia/Kolkata',
+        wallet_address: null
+    }
+
     const { data, error } = await supabaseAdmin
         .from('user_preferences')
         .select('*')
@@ -101,18 +126,13 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
         .single()
 
     if (error) {
-        // Return defaults if not found
-        return {
-            user_id: userId,
-            min_soc_percent: 20,
-            disable_discharge: false,
-            no_discharge_days: [],
-            quiet_hours_start: null,
-            quiet_hours_end: null
-        }
+        return defaults
     }
 
-    return data as UserPreferences
+    return {
+        ...defaults,
+        ...data
+    } as UserPreferences
 }
 
 /**

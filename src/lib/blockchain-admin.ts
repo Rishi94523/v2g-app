@@ -1,4 +1,5 @@
 import { ethers } from 'ethers'
+import { getBlockchainDeploymentConfig } from './blockchain-config'
 
 export interface PendingContributionForChain {
     id: number
@@ -13,13 +14,11 @@ const REWARD_DISTRIBUTOR_ABI = [
 ]
 
 function getDistributionConfig() {
-    const rpcUrl = process.env.SEPOLIA_RPC_URL || 'https://rpc.sepolia.org'
+    const deployment = getBlockchainDeploymentConfig()
     const privateKey = process.env.PRIVATE_KEY || process.env.DEPLOYER_PRIVATE_KEY
-    const rewardDistributorAddress =
-        process.env.REWARD_DISTRIBUTOR_ADDRESS ||
-        process.env.NEXT_PUBLIC_REWARD_DISTRIBUTOR_ADDRESS
+    const rewardDistributorAddress = deployment.rewardDistributorAddress
 
-    return { rpcUrl, privateKey, rewardDistributorAddress }
+    return { rpcUrl: deployment.rpcUrl, privateKey, rewardDistributorAddress }
 }
 
 export function isBlockchainDistributionConfigured(): boolean {
@@ -29,7 +28,14 @@ export function isBlockchainDistributionConfigured(): boolean {
 
 export async function settleContributionsOnChain(
     contributions: PendingContributionForChain[]
-): Promise<{ txHash: string; processedIds: number[] }> {
+): Promise<{
+    txHash: string
+    processedIds: number[]
+    gasUsed: string
+    effectiveGasPriceWei: string
+    feeWei: string
+    blockNumber: number
+}> {
     if (contributions.length === 0) {
         throw new Error('No contributions provided for settlement')
     }
@@ -64,6 +70,10 @@ export async function settleContributionsOnChain(
 
     return {
         txHash: receipt.hash,
-        processedIds: contributions.map((c) => c.id)
+        processedIds: contributions.map((c) => c.id),
+        gasUsed: receipt.gasUsed.toString(),
+        effectiveGasPriceWei: (receipt.gasPrice ?? 0n).toString(),
+        feeWei: (receipt.gasUsed * (receipt.gasPrice ?? 0n)).toString(),
+        blockNumber: receipt.blockNumber,
     }
 }
